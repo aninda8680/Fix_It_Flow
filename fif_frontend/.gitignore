@@ -15,9 +15,9 @@ dist-ssr
 # Environment files
 .env
 .env.*
-# ignore backend env from frontend gitignore
-../fif_backend/.env
-../fif_backend/.env.*
+# Ignore backend env files
+fif_backend/.env
+fif_backend/.env.*
 
 # Editor directories and files
 .vscode/*

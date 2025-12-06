@@ -1,0 +1,17 @@
+# Ignore backend env
+fif_backend/.env
+fif_backend/.env.*
+
+# Ignore frontend env
+fif_frontend/.env
+fif_frontend/.env.*
+
+# Node modules (both folders)
+fif_backend/node_modules/
+fif_frontend/node_modules/
+
+# Logs
+*.log
+
+# Build outputs
+fif_frontend/dist/

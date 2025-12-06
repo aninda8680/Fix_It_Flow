@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* RESET problematic defaults */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;   /* prevents horizontal scrolling */
+  background: #ffffff;  /* white background */
+  color: #111111;       /* default text color */
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+/* Remove Vite defaults: NO body flex, NO centering */
+body {
+  display: block !important;
+  min-height: 100vh;
+}
+
+/* Ensure all elements respect container width */
+* {
+  box-sizing: border-box;
+}
+
+/* Optional: Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}

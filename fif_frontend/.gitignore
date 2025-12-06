@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Environment files
+.env
+.env.*
+# ignore backend env from frontend gitignore
+../fif_backend/.env
+../fif_backend/.env.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,24 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import useTheme from "../hooks/useTheme";
+import { useAuth } from "../context/AuthContext";
 import { Sun, Moon } from "lucide-react";
 
-export default function Hero() {
+export default function Hero1() {
+  const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
-  const { theme, toggleTheme } = useTheme();
 
+  const userName = user?.firstName || "";
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploaded = e.target.files?.[0];
     if (uploaded) {
+      setFile(uploaded);
       setImagePreview(URL.createObjectURL(uploaded));
     }
   };
+
   const fetchLocation = () => {
     setLoadingLocation(true);
     if (!navigator.geolocation) {
@@ -36,14 +43,36 @@ export default function Hero() {
       }
     );
   };
-  
+
+  const handleSubmit = async () => {
+    if (!file || !description || !location) {
+      alert("Please complete all steps.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("description", description);
+    formData.append("lat", String(location.lat));
+    formData.append("lng", String(location.lng));
+
+    const res = await fetch("/api/complaints/create", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) alert("Submitted successfully!");
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <div className="w-full min-h-screen bg-white dark:bg-black text-black dark:text-white px-6 pt-20 flex justify-center relative transition-colors">
-      
-      {/* Login Button (Top Right) */}
-      <Link
-  to="/auth"
+      <button
+  onClick={handleLogout}
   className="absolute top-6 right-6 w-32 px-6 py-3
              bg-black dark:bg-white
              text-white dark:text-black
@@ -52,11 +81,11 @@ export default function Hero() {
              transition font-medium text-lg
              text-center"
 >
-  Login
-</Link>
+  Logout
+</button>
 
       
-      {/* Theme Toggle Button */}
+       {/* Theme Toggle Button */}
       <button
   onClick={toggleTheme}
   type="button"
@@ -75,7 +104,7 @@ export default function Hero() {
 >
   {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
 </button>
-
+      
       <div className="w-full max-w-5xl relative">
 
         {/* Title */}
@@ -124,13 +153,14 @@ export default function Hero() {
           {/* Right Column — Buttons */}
           <div className="flex flex-col justify-center gap-6">
 
-          <Link
-            to="/auth"
-            style={{ fontFamily: "'Caveat Brush', cursive" }}
-            className="text-center text-3xl text-black dark:text-white mb-2 underline cursor-pointer hover:text-black/70 dark:hover:text-white/70 transition block"
-          >
-            Login to submit
-          </Link>
+            {userName && (
+              <p
+                style={{ fontFamily: "'Caveat Brush', cursive" }}
+                className="text-center text-3xl text-black dark:text-white mb-2"
+              >
+                Welcome {userName}!
+              </p>
+            )}
 
             <button
               onClick={fetchLocation}
@@ -140,12 +170,11 @@ export default function Hero() {
             </button>
 
             <button
-              disabled
-              className="border border-black/40 dark:border-white/30 px-6 py-3 rounded-xl text-xl text-black/40 dark:text-white/30 cursor-not-allowed opacity-50"
+              onClick={handleSubmit}
+              className="border border-black dark:border-white px-6 py-3 rounded-xl text-xl hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition"
             >
               Submit Complaint
             </button>
-
           </div>
 
         </div>

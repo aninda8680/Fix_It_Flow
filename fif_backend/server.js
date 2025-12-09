@@ -19,5 +19,5 @@ mongoose
 app.use("/api/auth", authRoutes);
 
 app.listen(process.env.PORT, () =>
-  console.log(`Backend running at http://localhost:${process.env.PORT}`)
+  console.log(`      Backend running at http://localhost:${process.env.PORT}`)
 );

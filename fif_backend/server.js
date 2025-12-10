@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
+import complaintRoutes from "./routes/complaints.js";
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ mongoose
   .catch((err) => console.log("DB Connection Error:", err));
 
 app.use("/api/auth", authRoutes);
+app.use("/api/complaints", complaintRoutes);
 
 app.listen(process.env.PORT, () =>
   console.log(`      Backend running at http://localhost:${process.env.PORT}`)

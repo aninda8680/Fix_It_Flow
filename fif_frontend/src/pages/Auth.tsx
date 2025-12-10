@@ -67,6 +67,7 @@ export default function Auth() {
     alert(data.message);
 
     if (res.ok) {
+      // After successful registration, automatically log in the user
       const loginRes = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,13 +80,10 @@ export default function Auth() {
       const loginData = await loginRes.json();
 
       if (loginRes.ok) {
-        localStorage.setItem("token", loginData.token);
-        if (loginData.user?.firstName) {
-          localStorage.setItem("userFirstName", loginData.user.firstName);
-        }
+        // Use the login function from AuthContext to properly set auth state
+        login(loginData.token, loginData.user);
+        navigate("/");
       }
-
-      navigate("/");
     }
   };
 

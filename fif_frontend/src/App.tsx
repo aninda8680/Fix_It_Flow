@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
+import { Toaster } from "react-hot-toast";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Auth";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -38,6 +39,33 @@ export default function App() {
     <AuthProvider>
       <div className="w-full overflow-x-hidden">
         <AppRoutes />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 4000,
+            className: "dark:bg-white dark:text-black bg-black text-white",
+            style: {
+              borderRadius: "12px",
+              padding: "16px",
+              fontSize: "16px",
+              fontWeight: "500",
+            },
+            success: {
+              iconTheme: {
+                primary: "#10b981",
+                secondary: "#fff",
+              },
+              className: "dark:bg-white dark:text-black bg-black text-white",
+            },
+            error: {
+              iconTheme: {
+                primary: "#ef4444",
+                secondary: "#fff",
+              },
+              className: "dark:bg-white dark:text-black bg-black text-white",
+            },
+          }}
+        />
       </div>
     </AuthProvider>
   );

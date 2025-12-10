@@ -68,7 +68,12 @@ router.get("/verify", async (req, res) => {
 
     res.json({ user, message: "Token valid" });
   } catch (err) {
-    res.status(401).json({ message: "Invalid token" });
+    // Check if token is expired
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token expired", expired: true });
+    }
+    // Invalid token or other errors
+    res.status(401).json({ message: "Invalid token", expired: false });
   }
 });
 

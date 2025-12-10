@@ -54,17 +54,45 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
-        setToken(storedToken);
+        if (data.user) {
+          // Token is valid, restore user session
+          setUser(data.user);
+          setToken(storedToken);
+        } else {
+          // No user data, clear storage
+          localStorage.removeItem("token");
+          localStorage.removeItem("userFirstName");
+        }
       } else {
-        // Token invalid, clear storage
+        // Token invalid or expired
+        const errorData = await res.json().catch(() => ({}));
+        
+        // Clear storage regardless of reason (expired or invalid)
+        localStorage.removeItem("token");
+        localStorage.removeItem("userFirstName");
+        setUser(null);
+        setToken(null);
+        
+        // Log for debugging (optional)
+        if (errorData.expired) {
+          console.log("Session expired. Please login again.");
+        }
+      }
+    } catch (error) {
+      // Network error or other issues
+      // If offline, keep the token but don't set user (will require re-authentication when online)
+      if (!navigator.onLine) {
+        console.warn("Offline: Cannot verify token. User will need to login when online.");
+        // Clear token if we can't verify it (safer approach)
+        localStorage.removeItem("token");
+        localStorage.removeItem("userFirstName");
+      } else {
+        console.error("Auth check failed:", error);
         localStorage.removeItem("token");
         localStorage.removeItem("userFirstName");
       }
-    } catch (error) {
-      console.error("Auth check failed:", error);
-      localStorage.removeItem("token");
-      localStorage.removeItem("userFirstName");
+      setUser(null);
+      setToken(null);
     } finally {
       setLoading(false);
     }

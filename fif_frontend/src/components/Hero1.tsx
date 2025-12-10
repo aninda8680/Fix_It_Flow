@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import useTheme from "../hooks/useTheme";
 import { useAuth } from "../context/AuthContext";
 import { Sun, Moon } from "lucide-react";
@@ -9,59 +10,127 @@ import { Sun, Moon } from "lucide-react";
 export default function Hero1() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { user, logout } = useAuth();
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const { user, token, logout } = useAuth();
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const userName = user?.firstName || "";
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const uploaded = e.target.files?.[0];
-    if (uploaded) {
-      setFile(uploaded);
-      setImagePreview(URL.createObjectURL(uploaded));
+    const uploadedFiles = Array.from(e.target.files || []);
+    
+    if (uploadedFiles.length > 0) {
+      // Validate file sizes (5MB = 5 * 1024 * 1024 bytes)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      const invalidFiles = uploadedFiles.filter(file => file.size > maxSize);
+      
+      if (invalidFiles.length > 0) {
+        toast.error(`Some images exceed 5MB limit. Please select smaller images.`);
+        // Clear the input
+        e.target.value = "";
+        return;
+      }
+      
+      // Add new files to existing ones
+      const newFiles = [...files, ...uploadedFiles];
+      setFiles(newFiles);
+      
+      // Create previews for all images
+      const newPreviews = uploadedFiles.map((file) => URL.createObjectURL(file));
+      setImagePreviews([...imagePreviews, ...newPreviews]);
     }
+  };
+
+  const removeImage = (index: number) => {
+    const newFiles = files.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    
+    // Revoke object URL to free memory
+    URL.revokeObjectURL(imagePreviews[index]);
+    
+    setFiles(newFiles);
+    setImagePreviews(newPreviews);
   };
 
   const fetchLocation = () => {
     setLoadingLocation(true);
     if (!navigator.geolocation) {
-      alert("Geolocation not supported!");
+      toast.error("Geolocation not supported!");
+      setLoadingLocation(false);
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLoadingLocation(false);
+        toast.success("Location detected successfully!");
       },
       () => {
-        alert("Unable to fetch location!");
+        toast.error("Unable to fetch location!");
         setLoadingLocation(false);
       }
     );
   };
 
   const handleSubmit = async () => {
-    if (!file || !description || !location) {
-      alert("Please complete all steps.");
+    if (files.length === 0 || !description || !location) {
+      toast.error("Please upload at least one image, add a description, and detect location.");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("image", file);
-    formData.append("description", description);
-    formData.append("lat", String(location.lat));
-    formData.append("lng", String(location.lng));
+    if (!token) {
+      toast.error("Please login to submit a complaint.");
+      return;
+    }
 
-    const res = await fetch("/api/complaints/create", {
-      method: "POST",
-      body: formData,
-    });
+    setIsSubmitting(true);
 
-    if (res.ok) alert("Submitted successfully!");
+    try {
+      const formData = new FormData();
+      
+      // Append all images
+      files.forEach((file) => {
+        formData.append("images", file);
+      });
+      
+      formData.append("description", description);
+      formData.append("lat", String(location.lat));
+      formData.append("lng", String(location.lng));
+
+      const API_URL = import.meta.env.VITE_BACKEND_API_URL;
+      const res = await fetch(`${API_URL}/api/complaints/create`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success("Complaint submitted successfully!");
+        // Reset form
+        setFiles([]);
+        setImagePreviews([]);
+        setDescription("");
+        setLocation(null);
+        // Clear file input
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+        if (fileInput) fileInput.value = "";
+      } else {
+        toast.error(data.message || "Failed to submit complaint. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error submitting complaint:", error);
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleLogout = () => {
@@ -118,24 +187,54 @@ export default function Hero1() {
         <div className="py-10 grid grid-cols-1 md:grid-cols-3 gap-10">
 
           {/* Left Box — Image Upload */}
-          <div className="border-2 border-dashed border-black/40 dark:border-white/30 rounded-2xl h-[420px] flex flex-col justify-between p-6">
-            <div className="flex-1 flex items-center justify-center text-black/40 dark:text-white/40 text-xl">
-              {imagePreview ? (
-                <img
-                  src={imagePreview}
-                  className="w-full h-full object-cover rounded-xl"
-                />
+          <div className="border-2 border-dashed border-black/40 dark:border-white/30 rounded-2xl h-[420px] flex flex-col p-6">
+            <div className="flex-1 overflow-y-auto">
+              {imagePreviews.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                        type="button"
+                      >
+                        ×
+                      </button>
+                      <span className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        {index + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                "Upload Image"
+                <div className="flex items-center justify-center h-full text-black/40 dark:text-white/40 text-xl">
+                  Upload Images
+                </div>
               )}
             </div>
 
-            <label className="cursor-pointer">
-              <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-              <div className="mt-4 bg-white dark:bg-black border border-black dark:border-white px-6 py-3 rounded-xl text-center hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition text-lg">
-                Choose Files
+            <label className="cursor-pointer mt-4">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageChange}
+                className="hidden"
+              />
+              <div className="bg-white dark:bg-black border border-black dark:border-white px-6 py-3 rounded-xl text-center hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition text-lg">
+                {imagePreviews.length > 0 ? "Add More Images" : "Choose Images"}
               </div>
             </label>
+            {imagePreviews.length > 0 && (
+              <p className="text-xs text-center mt-2 text-black/60 dark:text-white/60">
+                {imagePreviews.length} image{imagePreviews.length > 1 ? "s" : ""} selected
+              </p>
+            )}
           </div>
 
           {/* Middle Box — Description */}
@@ -171,9 +270,10 @@ export default function Hero1() {
 
             <button
               onClick={handleSubmit}
-              className="border border-black dark:border-white px-6 py-3 rounded-xl text-xl hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition"
+              disabled={isSubmitting}
+              className="border border-black dark:border-white px-6 py-3 rounded-xl text-xl hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Submit Complaint
+              {isSubmitting ? "Submitting..." : "Submit Complaint"}
             </button>
           </div>
 

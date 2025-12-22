@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useTheme from "../hooks/useTheme";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
+
 
 export default function Auth() {
   // ✅ Apply global theme silently
@@ -20,72 +22,54 @@ export default function Auth() {
     confirmPassword: "",
   });
 
-  const API_URL = import.meta.env.VITE_BACKEND_API_URL;
+const API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
   const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   // LOGIN
-  const handleLogin = async (e: any) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const res = await fetch(`${API_URL}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  
+    try {
+      const { data } = await api.post("/api/auth/login", {
         email: form.email,
         password: form.password,
-      }),
-    });
-
-    const data = await res.json();
-    alert(data.message);
-
-    if (res.ok) {
+      });
+  
       login(data.token, data.user);
       navigate("/");
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Login failed");
     }
   };
+  
 
-  // REGISTER
-  const handleRegister = async (e: any) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     if (form.password !== form.confirmPassword) {
       alert("Passwords do not match");
       return;
     }
-
-    const res = await fetch(`${API_URL}/api/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    const data = await res.json();
-    alert(data.message);
-
-    if (res.ok) {
-      // After successful registration, automatically log in the user
-      const loginRes = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-        }),
+  
+    try {
+      await api.post("/api/auth/register", form);
+  
+      // Auto-login
+      const { data } = await api.post("/api/auth/login", {
+        email: form.email,
+        password: form.password,
       });
-
-      const loginData = await loginRes.json();
-
-      if (loginRes.ok) {
-        // Use the login function from AuthContext to properly set auth state
-        login(loginData.token, loginData.user);
-        navigate("/");
-      }
+  
+      login(data.token, data.user);
+      navigate("/");
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Registration failed");
     }
   };
+  
 
   return (
     // <motion.div
@@ -169,7 +153,7 @@ export default function Auth() {
         )}
 
         {/* REGISTER FORM */}
-{showRegister && (
+        {showRegister && (
   <form className="space-y-6" onSubmit={handleRegister}>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
@@ -183,10 +167,10 @@ export default function Auth() {
             <label className="block mb-1.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 tracking-wide">
               {label}
             </label>
-            <input
+              <input
               name={field}
-              type="text"
-              onChange={handleChange}
+                type="text"
+                onChange={handleChange}
               className="
                 w-full px-4 py-3 rounded-lg
                 border border-zinc-300 dark:border-zinc-700
@@ -198,10 +182,10 @@ export default function Auth() {
                 focus:ring-2 focus:ring-black/80 dark:focus:ring-white/70
                 transition-all
               "
-            />
-          </div>
+              />
+            </div>
         ))}
-      </div>
+            </div>
 
       {/* RIGHT COLUMN — Email / Password / Confirm Password */}
       <div className="space-y-6">
@@ -214,10 +198,10 @@ export default function Auth() {
             <label className="block mb-1.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 tracking-wide">
               {label}
             </label>
-            <input
+              <input
               name={field}
               type={type}
-              onChange={handleChange}
+                onChange={handleChange}
               className="
                 w-full px-4 py-3 rounded-lg
                 border border-zinc-300 dark:border-zinc-700
@@ -229,25 +213,25 @@ export default function Auth() {
                 focus:ring-2 focus:ring-black/80 dark:focus:ring-white/70
                 transition-all
               "
-            />
-          </div>
+              />
+            </div>
         ))}
-      </div>
-    </div>
+            </div>
+            </div>
 
-    <button
-      type="submit"
+            <button
+              type="submit"
       className="
         w-full py-3 rounded-xl text-lg font-semibold
         bg-black text-white hover:bg-zinc-800
         dark:bg-white dark:text-black dark:hover:bg-zinc-300
         transition-all shadow
       "
-    >
-      Create Account →
-    </button>
-  </form>
-)}
+            >
+              Create Account →
+            </button>
+          </form>
+        )}
 
 
 

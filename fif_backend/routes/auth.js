@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// REGISTER
+/* ================= REGISTER ================= */
 router.post("/register", async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
@@ -16,20 +16,20 @@ router.post("/register", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
+    await User.create({
       firstName,
       lastName,
       email,
       password: hashedPassword,
     });
 
-    res.json({ message: "Account created", user });
+    res.json({ message: "Account created successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// LOGIN
+/* ================= LOGIN ================= */
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -42,38 +42,49 @@ router.post("/login", async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: "Invalid email or password" });
 
-    const token = jwt.sign({ id: user._id }, "SECRET123", { expiresIn: "7d" });
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "30d" } // 🔥 longer session
+    );
 
-    res.json({ message: "Login successful", token, user });
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// VERIFY TOKEN
+/* ================= VERIFY TOKEN ================= */
 router.get("/verify", async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
-    
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ valid: false });
     }
 
-    const decoded = jwt.verify(token, "SECRET123");
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     const user = await User.findById(decoded.id).select("-password");
-
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(401).json({ valid: false });
     }
 
-    res.json({ user, message: "Token valid" });
+    res.json({ valid: true, user });
   } catch (err) {
-    // Check if token is expired
     if (err.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token expired", expired: true });
+      return res.status(401).json({ valid: false, expired: true });
     }
-    // Invalid token or other errors
-    res.status(401).json({ message: "Invalid token", expired: false });
+    res.status(401).json({ valid: false });
   }
 });
 

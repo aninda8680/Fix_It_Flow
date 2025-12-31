@@ -28,14 +28,23 @@ const upload = multer({
 // Middleware to verify JWT token
 const verifyToken = async (req, res, next) => {
   try {
+    console.log("🟡 AUTH HEADER 👉", req.headers.authorization);
+
     const token = req.headers.authorization?.split(" ")[1];
+    console.log("🟡 TOKEN ONLY 👉", token);
+    console.log("🟡 TOKEN LENGTH 👉", token?.length);
 
     if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
 
-    const decoded = jwt.verify(token, "SECRET123");
+    console.log("🟢 JWT SECRET 👉", process.env.JWT_SECRET);
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("🟢 DECODED 👉", decoded);
+
     const user = await User.findById(decoded.id);
+    console.log("🟢 USER 👉", user?._id);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -44,9 +53,11 @@ const verifyToken = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    console.error("🔴 VERIFY TOKEN ERROR 👉", error.message);
     res.status(401).json({ message: "Invalid token" });
   }
 };
+
 
 // CREATE COMPLAINT - Multiple images support
 router.post(

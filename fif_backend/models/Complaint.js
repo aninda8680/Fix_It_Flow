@@ -12,6 +12,19 @@ const complaintSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // 🔥 AUTO-FILLED BY YOLO
+    issueType: {
+      type: String,
+      enum: ["pothole", "unknown"],
+      default: "unknown",
+    },
+
+    aiDetection: {
+      detected: { type: Boolean, default: false },
+      confidence: { type: Number },
+      boxes: [[Number]], // [[x1,y1,x2,y2]]
+    },
+
     images: [
       {
         url: String,

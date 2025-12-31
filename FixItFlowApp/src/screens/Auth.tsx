@@ -10,10 +10,13 @@ import {
 } from "react-native";
 import api from "../services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 
 export default function Auth({ navigation }: any) {
   const [isLogin, setIsLogin] = useState(true);
+  const { login } = useContext(AuthContext);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -34,13 +37,7 @@ export default function Auth({ navigation }: any) {
           password: form.password,
         });
 
-                // SAVE TOKEN (🔥 key line)
-        await AsyncStorage.setItem("token", res.data.token);
-
-        // optional: save user
-        await AsyncStorage.setItem("user", JSON.stringify(res.data.user));
-
-        navigation.replace("Home");
+        await login(res.data.token, res.data.user);
 
       } else {
         await api.post("/api/auth/register", form);

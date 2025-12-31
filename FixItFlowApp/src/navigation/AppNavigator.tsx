@@ -1,39 +1,31 @@
-// navigation/AppNavigation.tsx
-import React, { useEffect, useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useContext } from "react";
+import { View, ActivityIndicator } from "react-native";
+import { AuthContext } from "../context/AuthContext";
 
 import Auth from "../screens/Auth";
-import HomeScreen from "../screens/HomeScreen";
+import TabNavigator from "./TabNavigator";
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const [initialRoute, setInitialRoute] = useState<"Auth" | "Home">("Auth");
-  const [loading, setLoading] = useState(true);
+  const { token, loading } = useContext(AuthContext);
 
-  useEffect(() => {
-    const checkLogin = async () => {
-      const token = await AsyncStorage.getItem("token");
-
-      if (token) {
-        setInitialRoute("Home"); // 🔥 auto-login
-      }
-      setLoading(false);
-    };
-
-    checkLogin();
-  }, []);
-
-  if (loading) return null; // splash later
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
+  }
 
   return (
-    <Stack.Navigator
-      initialRouteName={initialRoute}
-      screenOptions={{ headerShown: false }}
-    >
-      <Stack.Screen name="Auth" component={Auth} />
-      <Stack.Screen name="Home" component={HomeScreen} />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {token ? (
+        <Stack.Screen name="App" component={TabNavigator} />
+      ) : (
+        <Stack.Screen name="Auth" component={Auth} />
+      )}
     </Stack.Navigator>
   );
 }

@@ -1,5 +1,6 @@
 // screens/Home2Profile.tsx
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -19,11 +20,7 @@ export default function Home2Profile() {
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       const storedUser = await AsyncStorage.getItem("user");
       const token = await AsyncStorage.getItem("token");
@@ -42,7 +39,13 @@ export default function Home2Profile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [loadProfile])
+  );
 
   if (loading) {
     return (
@@ -133,8 +136,8 @@ export default function Home2Profile() {
                     item.status === "pending"
                       ? styles.pending
                       : item.status === "resolved"
-                      ? styles.resolved
-                      : styles.inProgress,
+                        ? styles.resolved
+                        : styles.inProgress,
                   ]}
                 >
                   <Text style={styles.statusText}>

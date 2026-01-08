@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { View, StyleSheet, Pressable } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HomeStack from "./HomeStack";
 import Home2Profile from "../screens/Home2Profile";
 import { Camera, Menu } from "lucide-react-native";
@@ -7,6 +8,8 @@ import { Camera, Menu } from "lucide-react-native";
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
@@ -15,8 +18,13 @@ export default function TabNavigator() {
 
         return (
           <View style={styles.wrapper}>
-            <View style={styles.container}>
-              {/* LEFT HALF */}
+            <View
+              style={[
+                styles.container,
+                { paddingBottom: insets.bottom }, // ✅ avoids gesture bar
+              ]}
+            >
+              {/* LEFT */}
               <Pressable
                 style={styles.half}
                 onPress={() => navigation.navigate("Home1")}
@@ -24,14 +32,13 @@ export default function TabNavigator() {
                 <Camera
                   size={26}
                   strokeWidth={2.2}
-                  color={activeIndex === 0 ? "#fff" : "#9ca3af"}
+                  color={activeIndex === 0 ? "#4c85ffff" : "#edededff"}
                 />
               </Pressable>
 
-              {/* CENTER DIVIDER */}
               <View style={styles.divider} />
 
-              {/* RIGHT HALF */}
+              {/* RIGHT */}
               <Pressable
                 style={styles.half}
                 onPress={() => navigation.navigate("Home2")}
@@ -39,7 +46,7 @@ export default function TabNavigator() {
                 <Menu
                   size={26}
                   strokeWidth={2.2}
-                  color={activeIndex === 1 ? "#fff" : "#9ca3af"}
+                  color={activeIndex === 1 ? "#4c85ffff" : "#ffffffff"}
                 />
               </Pressable>
             </View>
@@ -53,36 +60,39 @@ export default function TabNavigator() {
   );
 }
 
-/* ================= STYLES ================= */
+
 
 const styles = StyleSheet.create({
   wrapper: {
     position: "absolute",
-    bottom: 30,
-    left: 20,
-    right: 20,
+    left: 0,
+    right: 0,
+    bottom: 0, // ✅ touches screen bottom
   },
 
   container: {
-    height: 68,
-    width: "100%",
-    borderRadius: 34,
+    minHeight: 68,
     backgroundColor: "#111",
     flexDirection: "row",
     alignItems: "center",
+
+    // only top rounded
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+
     overflow: "hidden",
 
-    // shadow (correct)
-    elevation: 8,
+    // shadow
+    elevation: 10,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
 
   half: {
     flex: 1,
-    height: "100%",
+    height: 68,
     alignItems: "center",
     justifyContent: "center",
   },

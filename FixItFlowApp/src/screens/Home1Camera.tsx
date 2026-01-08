@@ -15,15 +15,43 @@ import {
 import { launchCamera } from "react-native-image-picker";
 import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Camera, X, Send, ImagePlus, AlertCircle } from "lucide-react-native";
+import { Camera, X, Send, ImagePlus, AlertCircle, MapPin } from "lucide-react-native";
 import api from "../services/api";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  interpolate,
+  Extrapolation,
+} from "react-native-reanimated";
+import LinearGradient from "react-native-linear-gradient";
+import BlurHeader from "../components/BlurHeader";
+
 
 export default function Home1Camera({ navigation }: any) {
   const [images, setImages] = useState<any[]>([]);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(false);
+  const [selectedProblems, setSelectedProblems] = useState<string[]>([]);
+
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+  
+
+  const toggleProblem = (id: string) => {
+    setSelectedProblems((prev) =>
+      prev.includes(id)
+        ? prev.filter((p) => p !== id)
+        : [...prev, id]
+    );
+  };
+
 
   const requestCameraPermission = async () => {
     if (Platform.OS !== "android") return true;
@@ -70,6 +98,11 @@ export default function Home1Camera({ navigation }: any) {
       Alert.alert("Missing Info", "Please capture at least one photo of the issue.");
       return;
     }
+    if (selectedProblems.length === 0) {
+      Alert.alert("Missing Info", "Please select at least one problem type.");
+      return;
+    }
+
     if (!description.trim()) {
       Alert.alert("Missing Info", "Please enter a short description of the issue.");
       return;
@@ -99,6 +132,8 @@ export default function Home1Camera({ navigation }: any) {
       });
 
       formData.append("description", description);
+      formData.append("problemTypes", JSON.stringify(selectedProblems));
+
       formData.append("lat", lat);
       formData.append("lng", lng);
 
@@ -115,14 +150,18 @@ export default function Home1Camera({ navigation }: any) {
 
       Alert.alert("Success", "Complaint submitted successfully!", [
         {
-          text: "OK", onPress: () => {
+          text: "OK",
+          onPress: () => {
             setDescription("");
             setImages([]);
-          }
-        }
+            setSelectedProblems([]); // ✅ reset multi-select
+          },
+        },
       ]);
+
       setDescription("");
       setImages([]);
+      setSelectedProblems([]);
 
     } catch (err: any) {
       console.log("❌ Complaint Error:", err?.response?.data || err.message);
@@ -140,11 +179,11 @@ export default function Home1Camera({ navigation }: any) {
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
       {/* Ambient Background Gradient */}
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 400 }}>
-        <Svg height="100%" width="100%" style={{ opacity: 0.3 }}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 300 }}>
+        <Svg height="100%" width="100%" style={{ opacity: 1 }}>
           <Defs>
             <RadialGradient id="grad" cx="50%" cy="0%" rx="80%" ry="80%" fx="50%" fy="0%" gradientUnits="userSpaceOnUse">
-              <Stop offset="0" stopColor="#3b82f6" stopOpacity="0.4" />
+              <Stop offset="0" stopColor="#ffffffff" stopOpacity="0.4" />
               <Stop offset="1" stopColor="#000000" stopOpacity="0" />
             </RadialGradient>
           </Defs>
@@ -156,10 +195,17 @@ export default function Home1Camera({ navigation }: any) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+        {/* Fixed Haze Overlay */}
+<BlurHeader scrollY={scrollY} height={100} />
+
+        <Animated.ScrollView 
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+        >
 
           {/* Header */}
-          <View style={{ marginBottom: 32, marginTop: 40 }}>
+          <View style={{ marginBottom: 32, marginTop: 30 }}>
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
               <View style={{ width: 4, height: 28, backgroundColor: "#3b82f6", borderRadius: 2, marginRight: 12 }} />
               <Text style={{ color: "#fff", fontSize: 32, fontWeight: "700", letterSpacing: 0.5 }}>Report Issue</Text>
@@ -239,8 +285,62 @@ export default function Home1Camera({ navigation }: any) {
             </View>
           </View>
 
-          {/* Description Section */}
+          {/* Problem Type Selector */}
           <View style={{ marginBottom: 36 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+              <MapPin size={20} color="#3b82f6" style={{ marginRight: 8 }} />
+              <Text style={{ color: "#fff", fontSize: 18, fontWeight: "600" }}>Problem Type</Text>
+            </View>
+
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -6 }}>
+              {[
+                { id: "potholes", label: "Potholes" },
+                { id: "broken_lamp", label: "Broken Lamp" },
+                { id: "garbage_dump", label: "Garbage Dump" },
+                { id: "water_logging", label: "Water Logging" },
+                { id: "drainage_block", label: "Drainage" },
+                { id: "street_light", label: "Street Light" },
+              ].map((problem) => {
+                const isSelected = (selectedProblems || []).includes(problem.id);
+                return (
+                  <TouchableOpacity
+                    key={problem.id}
+                    onPress={() => toggleProblem(problem.id)}
+                    activeOpacity={0.7}
+                    style={{
+                      width: "31%",
+                      marginHorizontal: "1.1%",
+                      marginBottom: 12,
+                      paddingVertical: 12,
+                      paddingHorizontal: 4,
+                      borderRadius: 100,
+                      borderWidth: 1,
+                      borderStyle: "dashed",
+                      borderColor: isSelected ? "#3b82f6" : "#3f3f46",
+                      backgroundColor: isSelected ? "rgba(59, 130, 246, 0.1)" : "transparent",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: isSelected ? "#fff" : "#a1a1aa",
+                        fontSize: 11,
+                        fontWeight: isSelected ? "700" : "500",
+                        textAlign: "center"
+                      }}
+                      numberOfLines={1}
+                    >
+                      {problem.label.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Description Section */}
+          <View style={{ marginBottom: 26 }}>
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
               <AlertCircle size={20} color="#3b82f6" style={{ marginRight: 8 }} />
               <Text style={{ color: "#fff", fontSize: 18, fontWeight: "600" }}>Description</Text>
@@ -273,6 +373,7 @@ export default function Home1Camera({ navigation }: any) {
             </View>
           </View>
 
+
           {/* Submit Button */}
           <TouchableOpacity
             onPress={submitComplaint}
@@ -301,8 +402,9 @@ export default function Home1Camera({ navigation }: any) {
               </>
             )}
           </TouchableOpacity>
+          <View style={{ marginBottom: 26 }}></View>
 
-        </ScrollView>
+        </Animated.ScrollView>
       </KeyboardAvoidingView>
     </View>
   );

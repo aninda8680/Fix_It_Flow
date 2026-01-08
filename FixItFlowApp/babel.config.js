@@ -1,4 +1,5 @@
 module.exports = {
+  assets: ["./assets/fonts"],
   presets: ['module:@react-native/babel-preset'],
   plugins: [
     [
@@ -9,5 +10,6 @@ module.exports = {
         allowUndefined: true,
       },
     ],
+    'react-native-reanimated/plugin',
   ],
 };
